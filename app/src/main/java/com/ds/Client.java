@@ -122,7 +122,7 @@ public class Client implements Publisher, Consumer
                                     while (get_stories_count != 0) {
                                         MultimediaFile story = ((Value) reader.readObject()).getMultiMediaFile();
                                         System.out.println(story);
-                                        //saveFile(story, othersStoriesPath);
+                                        saveFile(story, othersStoriesPath);
                                         //scheduleDeletion(story, othersStoriesPath);
                                         get_stories_count--;
                                     }
@@ -147,7 +147,7 @@ public class Client implements Publisher, Consumer
                             }
                         }
                         if (msgFromGroupChat.getMultiMediaFile() != null && !msgFromGroupChat.isCommand()) {
-                            //saveFile((com.ds.MultimediaFile)msgFromGroupChat.getMultiMediaFile(), savedMedia);
+                            saveFile((MultimediaFile)msgFromGroupChat.getMultiMediaFile(), savedMedia);
                             chatMessages.add(msgFromGroupChat);
                         }
                     } catch (Exception e) {

@@ -6,7 +6,9 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.app.ProgressDialog;
 import android.content.Intent;
+import android.content.res.AssetFileDescriptor;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -16,6 +18,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
+import android.util.Base64InputStream;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -25,9 +28,16 @@ import android.widget.ImageView;
 
 import com.mikhaellopez.circularimageview.CircularImageView;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.util.ArrayList;
+import java.util.Base64;
 
 public class ChatRoomActivity extends AppCompatActivity {
 
@@ -70,22 +80,25 @@ public class ChatRoomActivity extends AppCompatActivity {
         sendMsgBtn = findViewById(R.id.chat_room_msgBtn);
         sendMsgTxt = findViewById(R.id.chat_room_msgTxt);
         galleryBtn = findViewById(R.id.chat_room_mediaBtn);
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        new InitChatTask().execute(topicName);
 
         client = ((MyApp)getApplication()).getClient();
-
+        new InitChatTask().execute(topicName);
         activityChatIcon = findViewById(R.id.chat_room_title_image);
         topicIconMMF = client.getProfile().getSubbedTopicsImages().get(client.getSubbedTopics().indexOf(topicName));
         Icon icon = Icon.createWithData(topicIconMMF.getMultimediaFileChunk(), 0, (int)topicIconMMF.getLength());
         activityChatIcon.setImageIcon(icon);
 
-        messageAdapter = new MessageAdapter(getApplicationContext(), client.getChatMessages(), client.getUsername());
+        messageAdapter = new MessageAdapter(getApplicationContext(), client.getChatMessages(), client.getUsername(), client.getSavedMedia());
         recyclerView.setAdapter(messageAdapter);
+
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        messageAdapter = new MessageAdapter(getApplicationContext(), client.getChatMessages(), client.getUsername(), client.getSavedMedia());
+        messageAdapter.notifyDataSetChanged();
 
         sendMsgBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -95,6 +108,10 @@ public class ChatRoomActivity extends AppCompatActivity {
                 if (!message.equals("") && !message.trim().equals("")){
                     new SendMessageTask().execute(new Value(message));
                 }
+                if (MMFToSend != null) {
+                    new SendMessageTask().execute(new Value(MMFToSend));
+                    MMFToSend = null;
+                }
             }
         });
 
@@ -102,6 +119,7 @@ public class ChatRoomActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                intent.setType("image/* video/*");
                 startActivityForResult(intent, 3);
             }
         });
@@ -112,16 +130,43 @@ public class ChatRoomActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == RESULT_OK && data != null) {
-            Uri selectedImage = data.getData();
+            Uri selectedFile = data.getData();
+            String fileExtension = getFileName(selectedFile);
+            fileExtension = fileExtension.substring(fileExtension.lastIndexOf(".")+1);
+            System.out.println(fileExtension);
+            System.out.println(selectedFile);
+            System.out.println(selectedFile.getPath());
             try {
-                InputStream inputStream = getContentResolver().openInputStream(selectedImage);
-                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-                ByteBuffer byteBuffer = ByteBuffer.allocate(bitmap.getByteCount());
-                bitmap.copyPixelsToBuffer(byteBuffer);
-                MultimediaFile imageToSend = new MultimediaFile(byteBuffer.array(), getFileName(selectedImage) ,client.getUsername());
-                MMFToSend = imageToSend;
-                System.out.println(MMFToSend);
-                System.out.println(MMFToSend);
+                if (!fileExtension.equalsIgnoreCase("mp4")){
+                    InputStream inputStream = getContentResolver().openInputStream(selectedFile);
+                    Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+
+                    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+                    byte[] byte_arr = stream.toByteArray();
+
+                    MultimediaFile imageToSend = new MultimediaFile(byte_arr, getFileName(selectedFile), client.getUsername());
+                    MMFToSend = imageToSend;
+                } else {
+                    new GenerateVideoFileTask().execute(selectedFile);
+//                    InputStream inputStream = getContentResolver().openInputStream(selectedFile);
+//                    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+//
+//                    int nRead;
+//                    AssetFileDescriptor fileDescriptor = getApplicationContext().getContentResolver().openAssetFileDescriptor(selectedFile , "r");
+//                    long fileSize = fileDescriptor.getLength();
+//                    byte[] video_bytes = new byte[(int)fileSize];
+//
+//                    System.out.println("asAaaaaaaa");
+//                    System.out.println(fileSize);
+//
+//                    while ((nRead = inputStream.read(video_bytes, 0, video_bytes.length)) != -1) {
+//                        buffer.write(video_bytes, 0, nRead);
+//                    }
+//                    MultimediaFile videoToSend = new MultimediaFile(video_bytes, getFileName(selectedFile), client.getUsername());
+//                    System.out.println(videoToSend);
+//                    MMFToSend = videoToSend;
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -154,10 +199,53 @@ public class ChatRoomActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        endChatSession();
+        //endChatSession();
     }
 
     //Async Tasks
+    private class GenerateVideoFileTask extends AsyncTask<Uri, Void, MultimediaFile> {
+        private final ProgressDialog progressDialog = new ProgressDialog(ChatRoomActivity.this);
+        @Override
+        protected void onPreExecute() {
+            this.progressDialog.setMessage("Processing...");
+            this.progressDialog.show();
+        }
+
+        @Override
+        protected MultimediaFile doInBackground(Uri... uris) {
+            try {
+                Uri selectedFile = uris[0];
+                InputStream inputStream = getContentResolver().openInputStream(selectedFile);
+                ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+                int nRead;
+                AssetFileDescriptor fileDescriptor = getApplicationContext().getContentResolver().openAssetFileDescriptor(selectedFile, "r");
+                long fileSize = fileDescriptor.getLength();
+                byte[] video_bytes = new byte[(int) fileSize];
+
+                System.out.println("asAaaaaaaa");
+                System.out.println(fileSize);
+
+                while ((nRead = inputStream.read(video_bytes, 0, video_bytes.length)) != -1) {
+                    buffer.write(video_bytes, 0, nRead);
+                }
+                MultimediaFile videoToSend = new MultimediaFile(video_bytes, getFileName(selectedFile), client.getUsername());
+               return videoToSend;
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(MultimediaFile multimediaFile) {
+            System.out.println(multimediaFile);
+            MMFToSend = multimediaFile;
+            progressDialog.dismiss();
+        }
+    }
+
     private class InitChatTask extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... strings) {

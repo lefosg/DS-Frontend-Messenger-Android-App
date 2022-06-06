@@ -29,6 +29,7 @@ import android.widget.Toast;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -71,6 +72,7 @@ public class Stories extends AppCompatActivity implements NavigationView.OnNavig
 
         uploadStoryBtn = findViewById(R.id.upload_story_btn);
         refreshLayout = findViewById(R.id.stories_swiperefresh);
+
         client = ((MyApp) getApplication()).getClient();
         new GetStoriesTask().execute();
 
@@ -92,13 +94,12 @@ public class Stories extends AppCompatActivity implements NavigationView.OnNavig
                 new SwipeRefreshLayout.OnRefreshListener() {
                     @Override
                     public void onRefresh() {
+                        new GetStoriesTask().execute();
                         storiesAdapter.notifyDataSetChanged();
                         refreshLayout.setRefreshing(false);
                     }
                 }
         );
-
-
     }
 
     @Override
@@ -109,9 +110,12 @@ public class Stories extends AppCompatActivity implements NavigationView.OnNavig
             try {
                 InputStream inputStream = getContentResolver().openInputStream(selectedImage);
                 Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-                ByteBuffer byteBuffer = ByteBuffer.allocate(bitmap.getByteCount());
-                bitmap.copyPixelsToBuffer(byteBuffer);
-                MultimediaFile story = new MultimediaFile(byteBuffer.array(), getFileName(selectedImage) ,client.getUsername());
+
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+                byte[] byte_arr = stream.toByteArray();
+                MultimediaFile story = new MultimediaFile(byte_arr, getFileName(selectedImage) ,client.getUsername());
+
                 new UploadStoryTask().execute(story);
 
             } catch (Exception e) {
@@ -178,9 +182,11 @@ public class Stories extends AppCompatActivity implements NavigationView.OnNavig
         @Override
         protected Void doInBackground(Void... voids) {
             client.push(new Value("VIEW_STORIES"));
-            while (client.get_stories_count() != 0) {
-                if (client.get_stories_count() == 0) {
-                    break;
+            if (client.get_stories_count() != -1) {
+                while (client.get_stories_count() != 0) {
+                    if (client.get_stories_count() == 0) {
+                        break;
+                    }
                 }
             }
             return null;
@@ -191,14 +197,14 @@ public class Stories extends AppCompatActivity implements NavigationView.OnNavig
             progressDialog.dismiss();
             File[] files = new File(client.getOthersStoriesPath()).listFiles();
             System.out.println(files.length);
-            ArrayList<File> files_list = new ArrayList<>();
+            ArrayList<Uri> files_uri = new ArrayList<>();
             for (File f : files) {
-                System.out.println(f.getAbsolutePath());
-                files_list.add(f);
+                files_uri.add(Uri.fromFile(f));
             }
             System.out.println(files);
-            storiesAdapter  = new StoriesAdapter(Stories.this, files_list);
+            storiesAdapter = new StoriesAdapter(Stories.this, files_uri);
             viewPager.setAdapter(storiesAdapter);
+            storiesAdapter.notifyDataSetChanged();
         }
     }
 

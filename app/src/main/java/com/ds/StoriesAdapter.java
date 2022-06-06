@@ -2,6 +2,7 @@ package com.ds;
 
 import android.content.Context;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -16,14 +17,14 @@ import java.util.ArrayList;
 public class StoriesAdapter extends PagerAdapter {
 
     private Context context;
-    ArrayList<File> files;
+    ArrayList<Uri> files;
 
-    StoriesAdapter(Context context, ArrayList<File> files) {
+    StoriesAdapter(Context context, ArrayList<Uri> files) {
         this.context = context;
         this.files = files;
     }
 
-    public void setFilesList(ArrayList<File> files) {
+    public void setFilesList(ArrayList<Uri> files) {
         this.files = files;
     }
 
@@ -42,9 +43,8 @@ public class StoriesAdapter extends PagerAdapter {
     public Object instantiateItem(@NonNull ViewGroup container, int position) {
         ImageView imageView = new ImageView(context);
         imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        //imageView.setImageResource(imageArray[position]);
-        imageView.setImageBitmap(BitmapFactory.decodeFile(files.get(position).getAbsolutePath()));
-        System.out.println(files.get(position).getAbsolutePath());
+        imageView.setImageURI(files.get(position));
+
         container.addView(imageView, 0);
         return imageView;
     }
