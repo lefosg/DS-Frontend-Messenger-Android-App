@@ -44,6 +44,17 @@ import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 
+/*TODO:
+*  story loads after two refreshes + fix aspect ratio
+*  large images/video loading + image quality on bitmap
+*  secret chat crashed the other user?
+*  try with more than one brokers
+*  story camera button
+*  chat camera button
+*  image size in
+*/
+
+
 public class MainMenu extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
     public final String TAG = "MainMenu";
     private DrawerLayout drawerLayout;
@@ -74,7 +85,7 @@ public class MainMenu extends AppCompatActivity implements NavigationView.OnNavi
         setContentView(binding.getRoot());
 
         client = ((MyApp) getApplication()).getClient();
-        username = client.getProfile().getUsername();
+        //username = client.getProfile().getUsername();
 
         ip = this.getIntent().getStringExtra(ip_extra);
 
@@ -173,7 +184,7 @@ public class MainMenu extends AppCompatActivity implements NavigationView.OnNavi
 
 
     //Async Tasks
-    private class GetAvailableTopics extends AsyncTask<Dialog, Void, Dialog> {
+    private class   GetAvailableTopics extends AsyncTask<Dialog, Void, Dialog> {
         private final ProgressDialog progressDialog = new ProgressDialog(MainMenu.this);
 
         @Override

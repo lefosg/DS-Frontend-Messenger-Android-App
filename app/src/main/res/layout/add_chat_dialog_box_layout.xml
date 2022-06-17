@@ -21,7 +21,10 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginLeft="15dp"
+        android:drawableLeft="@drawable/ic_add"
         android:id="@+id/create_chat_Btn"
+        android:background="@drawable/button_color"
         android:text="Create"/>
 
     <TextView

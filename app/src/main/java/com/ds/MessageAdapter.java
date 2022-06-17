@@ -55,19 +55,24 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
     public void onBindViewHolder(@NonNull MessageAdapter.ViewHolder holder, int position) {
 
         Value chat = mChat.get(position);
+        //text message
         if (chat.getMessage() != null){
             holder.show_message.setText(chat.getMessage());
         }
+        //media
         if (chat.getMultiMediaFile() != null) {
             holder.show_message.setVisibility(View.GONE);
             MultimediaFile media = chat.getMultiMediaFile();
+            //image
             if (!media.getFileExtension().equals("mp4")) {
                 Bitmap bitmap = BitmapFactory.decodeByteArray(media.getMultimediaFileChunk(), 0, (int) media.getLength());
                 holder.mmf_image.getLayoutParams().width = bitmap.getWidth();
                 holder.mmf_image.getLayoutParams().height = bitmap.getHeight();
                 holder.mmf_image.setImageBitmap(bitmap);
                 holder.mmf_image.setVisibility(View.VISIBLE);
-            } else {
+            }
+            //video
+            else {
                 holder.playVideoBtn.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {

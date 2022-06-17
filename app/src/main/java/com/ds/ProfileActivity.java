@@ -10,6 +10,8 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -25,6 +27,7 @@ import com.google.android.material.navigation.NavigationView;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 
 public class ProfileActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener{
     private DrawerLayout drawerLayout;
@@ -86,6 +89,8 @@ public class ProfileActivity extends AppCompatActivity implements NavigationView
 
         editUsername_btn = findViewById(R.id.edit_username_button);
         editBio_btn = findViewById(R.id.edit_bio_button);
+        editUsername_btn.setEnabled(false);
+        editBio_btn.setEnabled(false);
 
 
 
@@ -95,9 +100,46 @@ public class ProfileActivity extends AppCompatActivity implements NavigationView
         editUsernameET = findViewById(R.id.editUsernameText);
         editBioET = findViewById(R.id.editBioText);
 
+        editUsernameET.addTextChangedListener(editUsername);
+        editBioET.addTextChangedListener(editBIO);
+
+
 
     }
+    private TextWatcher editUsername = new TextWatcher() {
 
+        @Override
+        public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+        }
+
+        @Override
+        public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+           String editU = editUsernameET.getText().toString().trim();
+           editUsername_btn.setEnabled(!editU.isEmpty());
+        }
+
+        @Override
+        public void afterTextChanged(Editable editable) {
+
+        }
+    };
+    private TextWatcher editBIO = new TextWatcher() {
+
+        @Override
+        public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+        }
+
+        @Override
+        public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+            String editB = editBioET.getText().toString().trim();
+            editUsername_btn.setEnabled(!editB.isEmpty());
+        }
+
+        @Override
+        public void afterTextChanged(Editable editable) {
+
+        }
+    };
     @Override
     protected void onStart() {
         client = ((MyApp)getApplication()).getClient();
@@ -127,6 +169,10 @@ public class ProfileActivity extends AppCompatActivity implements NavigationView
                     Toast.makeText(ProfileActivity.this,
                             "You already have that username.",
                             Toast.LENGTH_SHORT).show();
+                }else if (newUsername.isEmpty()) {
+                    Toast.makeText(ProfileActivity.this,
+                            "You must have a username.",
+                            Toast.LENGTH_SHORT).show();
                 }else{
                     new EditUsernameTask().execute(newUsername);
                 }
@@ -141,6 +187,10 @@ public class ProfileActivity extends AppCompatActivity implements NavigationView
                     Toast.makeText(ProfileActivity.this,
                             "You already have that bio.",
                             Toast.LENGTH_SHORT).show();
+                }else if(newBio.isEmpty()) {
+                    Toast.makeText(ProfileActivity.this,
+                            "You must have a bio.",
+                            Toast.LENGTH_SHORT).show();
                 }else{
                     new EditBioTask().execute(newBio);
                 }
@@ -154,8 +204,6 @@ public class ProfileActivity extends AppCompatActivity implements NavigationView
     public void onBackPressed() {
         if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
             drawerLayout.closeDrawer(GravityCompat.START);
-        } else {
-            super.onBackPressed();
         }
     }
 
@@ -278,4 +326,6 @@ public class ProfileActivity extends AppCompatActivity implements NavigationView
         Toast.makeText(ProfileActivity.this, "Logged Out", Toast.LENGTH_SHORT).show();
         startActivity(intent);
     }
+
+
 }

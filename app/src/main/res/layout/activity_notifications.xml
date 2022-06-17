@@ -7,6 +7,7 @@
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
     tools:context=".Notifications"
+    android:background="@drawable/gradient"
     tools:openDrawer="start"
     tools:ignore="MissingDefaultResource">
 
@@ -20,7 +21,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@color/design_default_color_primary"
+            android:background="@drawable/bar_color"
             android:elevation="4dp"
             android:popupTheme="@style/ThemeOverlay.AppCompat.Light"
             android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />

@@ -5,24 +5,36 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import androidx.viewpager.widget.ViewPager;
 
+import android.Manifest;
+import android.app.Activity;
 import android.app.ProgressDialog;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.res.AssetFileDescriptor;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Camera;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -39,7 +51,6 @@ import java.util.Date;
 public class Stories extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
     private DrawerLayout drawerLayout;
     private View header;
-    private Menu menu;
     String name_extra = "name_extra";
     String ip_extra = "ip_extra";
     String username, ip;
@@ -51,6 +62,11 @@ public class Stories extends AppCompatActivity implements NavigationView.OnNavig
     StoriesAdapter storiesAdapter;
     FloatingActionButton uploadStoryBtn;
     SwipeRefreshLayout refreshLayout;
+    ImageButton openCameraBtn;
+    private int requestCode;
+    private int resultCode;
+    private Intent data;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,11 +88,28 @@ public class Stories extends AppCompatActivity implements NavigationView.OnNavig
 
         uploadStoryBtn = findViewById(R.id.upload_story_btn);
         refreshLayout = findViewById(R.id.stories_swiperefresh);
+        openCameraBtn = findViewById(R.id.open_camera_btn);
+
+        if(ContextCompat.checkSelfPermission(Stories.this,
+                Manifest.permission.CAMERA)!= PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(Stories.this,
+                    new String[]{Manifest.permission.CAMERA},101);
+        }
+
+
+        openCameraBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                startActivityForResult(intent, 101);
+            }
+        });
 
         client = ((MyApp) getApplication()).getClient();
         new GetStoriesTask().execute();
 
     }
+
 
     @Override
     protected void onStart() {
@@ -86,6 +119,7 @@ public class Stories extends AppCompatActivity implements NavigationView.OnNavig
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                intent.setType("image/* video/*");
                 startActivityForResult(intent, 3);
             }
         });
@@ -105,21 +139,35 @@ public class Stories extends AppCompatActivity implements NavigationView.OnNavig
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == RESULT_OK && data != null) {
-            Uri selectedImage = data.getData();
-            try {
-                InputStream inputStream = getContentResolver().openInputStream(selectedImage);
-                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+        if(requestCode == 101 && resultCode == RESULT_OK){
+            Bitmap bitmap = (Bitmap) data.getExtras().get("data");
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.JPEG,100,bytes);
+            MediaStore.Images.Media.insertImage(getApplicationContext().getContentResolver(),bitmap,String.valueOf(System.currentTimeMillis()),null);
+            Toast.makeText(this,"Image saved successfully",Toast.LENGTH_SHORT).show();
+        }else if(requestCode == 3){
+            if (resultCode == RESULT_OK && data != null) {
+                Uri selectedFile = data.getData();
+                String fileExtension = getFileName(selectedFile);
+                fileExtension = fileExtension.substring(fileExtension.lastIndexOf(".")+1);
+                try {
+                    if (!fileExtension.equalsIgnoreCase("mp4")) {
+                        InputStream inputStream = getContentResolver().openInputStream(selectedFile);
+                        Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
 
-                ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
-                byte[] byte_arr = stream.toByteArray();
-                MultimediaFile story = new MultimediaFile(byte_arr, getFileName(selectedImage) ,client.getUsername());
+                        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+                        byte[] byte_arr = stream.toByteArray();
+                        MultimediaFile story = new MultimediaFile(byte_arr, getFileName(selectedFile), client.getUsername());
 
-                new UploadStoryTask().execute(story);
-
-            } catch (Exception e) {
-                e.printStackTrace();
+                        new UploadStoryTask().execute(story);
+                    } else {
+                        new GenerateVideoFileTask().execute(selectedFile);
+                        //upload task is called onPostExecute of GenerateVideoFileTask
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
@@ -168,6 +216,12 @@ public class Stories extends AppCompatActivity implements NavigationView.OnNavig
             client.push(new Value(story));
             return null;
         }
+        @Override
+        protected void onPostExecute(Void unused){
+            Intent intent = new Intent(Stories.this,SplashStoryUploading.class);
+            startActivity(intent);
+        }
+
     }
 
 
@@ -194,7 +248,6 @@ public class Stories extends AppCompatActivity implements NavigationView.OnNavig
 
         @Override
         protected void onPostExecute(Void unused) {
-            progressDialog.dismiss();
             File[] files = new File(client.getOthersStoriesPath()).listFiles();
             System.out.println(files.length);
             ArrayList<Uri> files_uri = new ArrayList<>();
@@ -205,6 +258,49 @@ public class Stories extends AppCompatActivity implements NavigationView.OnNavig
             storiesAdapter = new StoriesAdapter(Stories.this, files_uri);
             viewPager.setAdapter(storiesAdapter);
             storiesAdapter.notifyDataSetChanged();
+            progressDialog.dismiss();
+        }
+    }
+
+    private class GenerateVideoFileTask extends AsyncTask<Uri, Void, MultimediaFile> {
+        private final ProgressDialog progressDialog = new ProgressDialog(Stories.this);
+        @Override
+        protected void onPreExecute() {
+            this.progressDialog.setMessage("Processing...");
+            this.progressDialog.show();
+        }
+
+        @Override
+        protected MultimediaFile doInBackground(Uri... uris) {
+            try {
+                Uri selectedFile = uris[0];
+                InputStream inputStream = getContentResolver().openInputStream(selectedFile);
+                ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+                int nRead;
+                AssetFileDescriptor fileDescriptor = getApplicationContext().getContentResolver().openAssetFileDescriptor(selectedFile, "r");
+                long fileSize = fileDescriptor.getLength();
+                byte[] video_bytes = new byte[(int) fileSize];
+
+                System.out.println(fileSize);
+
+                while ((nRead = inputStream.read(video_bytes, 0, video_bytes.length)) != -1) {
+                    buffer.write(video_bytes, 0, nRead);
+                }
+                MultimediaFile videoToSend = new MultimediaFile(video_bytes, getFileName(selectedFile), client.getUsername());
+                return videoToSend;
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(MultimediaFile multimediaFile) {
+            new UploadStoryTask().execute(multimediaFile);
+            System.out.println(multimediaFile);
+            progressDialog.dismiss();
         }
     }
 

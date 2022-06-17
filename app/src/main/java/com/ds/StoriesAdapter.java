@@ -6,6 +6,8 @@ import android.net.Uri;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.MediaController;
+import android.widget.VideoView;
 
 import androidx.annotation.NonNull;
 import androidx.viewpager.widget.PagerAdapter;
@@ -41,16 +43,35 @@ public class StoriesAdapter extends PagerAdapter {
     @NonNull
     @Override
     public Object instantiateItem(@NonNull ViewGroup container, int position) {
-        ImageView imageView = new ImageView(context);
-        imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        imageView.setImageURI(files.get(position));
-
-        container.addView(imageView, 0);
-        return imageView;
+        String uri = files.get(position).toString();
+        String extension = uri.substring(uri.lastIndexOf("."));
+        System.out.println("EDWS");
+        System.out.println(uri);
+        if (!extension.equalsIgnoreCase(".mp4")){
+            System.out.println("FTIAXNW EIKONA STO STORY");
+            ImageView imageView = new ImageView(context);
+            imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            imageView.setImageURI(files.get(position));
+            container.addView(imageView, 0);
+            return imageView;
+        } else {
+            System.out.println("FTIAXNW VIDEO STO STORY");
+            VideoView videoView = new VideoView(context);
+            videoView.setVideoURI(files.get(position));
+            MediaController mediaController = new MediaController(context);
+            videoView.setMediaController(mediaController);
+            mediaController.setAnchorView(videoView);
+            container.addView(videoView, 0);
+            return videoView;
+        }
     }
 
     @Override
     public void destroyItem(@NonNull ViewGroup container, int position, @NonNull Object object) {
-        container.removeView((ImageView)object);
+        if (object instanceof ImageView) {
+            container.removeView((ImageView)object);
+        } else {
+            container.removeView((VideoView)object);
+        }
     }
 }

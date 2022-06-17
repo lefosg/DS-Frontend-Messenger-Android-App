@@ -28,7 +28,8 @@ public class Client implements Publisher, Consumer
     private MultimediaFile defaultTopicImage, defaultUserImage;
     private int get_stories_count=-1;
     private ArrayList<Value> chatMessages = new ArrayList<>();
-    private int chat_history_len;
+    //private int chat_history_len;
+    boolean secretToggle;
 
 
 
@@ -60,6 +61,7 @@ public class Client implements Publisher, Consumer
             this.othersStoriesPath = "/others_stories/";
             this.savedMedia = "/saved media/";
             this.topics = "/topics/";
+            this.secretToggle = false;
             //loadSubbedTopics(userPath + "/subbed_topics.txt");
         } catch (Exception e) {
             closeEverything();
@@ -123,7 +125,7 @@ public class Client implements Publisher, Consumer
                                         MultimediaFile story = ((Value) reader.readObject()).getMultiMediaFile();
                                         System.out.println(story);
                                         saveFile(story, othersStoriesPath);
-                                        //scheduleDeletion(story, othersStoriesPath);
+                                        scheduleDeletion(story, othersStoriesPath);
                                         get_stories_count--;
                                     }
                                     get_stories_count = -1;
@@ -146,7 +148,7 @@ public class Client implements Publisher, Consumer
                                 chatMessages.add(msgFromGroupChat);
                             }
                         }
-                        if (msgFromGroupChat.getMultiMediaFile() != null && !msgFromGroupChat.isCommand()) {
+                        if (msgFromGroupChat.getMultiMediaFile() != null) {
                             saveFile((MultimediaFile)msgFromGroupChat.getMultiMediaFile(), savedMedia);
                             chatMessages.add(msgFromGroupChat);
                         }
@@ -352,6 +354,14 @@ public class Client implements Publisher, Consumer
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public boolean getSecretToggle (){
+        return secretToggle;
+    }
+
+    public void setSecretToggle (boolean secretToggle){
+        this.secretToggle = secretToggle;
     }
 
     /**

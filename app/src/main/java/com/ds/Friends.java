@@ -14,6 +14,8 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -56,7 +58,7 @@ public class Friends extends AppCompatActivity implements NavigationView.OnNavig
         setContentView(R.layout.activity_friends);
 
         client = ((MyApp) getApplication()).getClient();
-        username = client.getProfile().getUsername();
+        //username = client.getProfile().getUsername();
         ip = this.getIntent().getStringExtra(ip_extra);
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view_profile);
@@ -67,11 +69,30 @@ public class Friends extends AppCompatActivity implements NavigationView.OnNavig
         setNav();
 
         addFriend_btn = findViewById(R.id.add_friend_btn);
+        addFriend_btn.setEnabled(false);
         addFriend_editTxt = findViewById(R.id.add_friend_editTxt);
+        addFriend_editTxt.addTextChangedListener(addFriendTextWatcher);
 
         friendsLV = findViewById(R.id.friends_lv);
         refreshLayout = findViewById(R.id.friends_swiperefresh);
     }
+    private TextWatcher addFriendTextWatcher = new TextWatcher() {
+        @Override
+        public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+        }
+
+        @Override
+        public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+            String friendToAdd =  addFriend_editTxt.getText().toString().trim();
+            addFriend_btn.setEnabled(!friendToAdd.isEmpty());
+        }
+
+        @Override
+        public void afterTextChanged(Editable editable) {
+
+        }
+    };
 
     @Override
     protected void onStart() {

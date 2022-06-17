@@ -10,6 +10,8 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -61,10 +63,30 @@ public class BlockedUsers extends AppCompatActivity implements NavigationView.On
         setNav();
 
         blockUser_btn = findViewById(R.id.block_user_btn);
+        blockUser_btn.setEnabled(false);
         blockUser_editTxt = findViewById(R.id.block_user_editTxt);
+        blockUser_editTxt.addTextChangedListener(blockUserTextWatcher);
 
         blockedUsersLV = findViewById(R.id.blocked_users_lv);
     }
+
+    private TextWatcher blockUserTextWatcher = new TextWatcher() {
+        @Override
+        public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+        }
+
+        @Override
+        public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+            String userToBlock = blockUser_editTxt.getText().toString().trim();
+            blockUser_btn.setEnabled(!userToBlock.isEmpty());
+        }
+
+        @Override
+        public void afterTextChanged(Editable editable) {
+
+        }
+    };
 
     @Override
     protected void onStart() {

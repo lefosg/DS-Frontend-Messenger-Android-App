@@ -5,6 +5,7 @@
     android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@drawable/gradient"
     android:fitsSystemWindows="true"
     tools:context=".Stories"
     tools:openDrawer="start">
@@ -14,11 +15,12 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@color/design_default_color_primary"
+            android:background="@drawable/bar_color"
             android:elevation="4dp"
             android:popupTheme="@style/ThemeOverlay.AppCompat.Light"
             android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
@@ -38,13 +40,22 @@
                     android:id="@+id/stories_viewPager"/>
             </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
+            <ImageButton
+                android:id="@+id/open_camera_btn"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:id="@+id/upload_story_btn"
-                android:src="@drawable/ic_add"
+                android:layout_gravity="start|bottom"
                 android:layout_margin="16dp"
-                android:layout_gravity="end|bottom" />
+                android:minHeight="48dp"
+                app:srcCompat="@drawable/ic_camera" />
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/upload_story_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end|bottom"
+                android:layout_margin="16dp"
+                android:src="@drawable/ic_add" />
 
         </FrameLayout>
     </LinearLayout>

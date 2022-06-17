@@ -6,6 +6,8 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.annotation.SuppressLint;
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
@@ -18,12 +20,11 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
-import android.util.Base64InputStream;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.ImageView;
+import android.widget.Toast;
 
 
 import com.mikhaellopez.circularimageview.CircularImageView;
@@ -40,14 +41,13 @@ import java.util.ArrayList;
 import java.util.Base64;
 
 public class ChatRoomActivity extends AppCompatActivity {
-
     String topicName;
-    ImageButton sendMsgBtn, galleryBtn;
+    ImageButton sendMsgBtn, galleryBtn,secretChatBtn,openCameraBtn;
     MultimediaFile topicIconMMF, MMFToSend;
     CircularImageView activityChatIcon;
-    EditText sendMsgTxt;
+    EditText sendMsgTxt,editTopicNameTxt,editUserNicknameOld,editUserNicknameNew;
     Client client;
-
+    Button editTopicBtn,editTopicNicknameBtn,editUserNicknameBtn;
     MessageAdapter messageAdapter;
     RecyclerView recyclerView;
 
@@ -55,7 +55,6 @@ public class ChatRoomActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat_room);
-
         Intent intent = getIntent();
         topicName = intent.getStringExtra("topicName");
 
@@ -80,6 +79,17 @@ public class ChatRoomActivity extends AppCompatActivity {
         sendMsgBtn = findViewById(R.id.chat_room_msgBtn);
         sendMsgTxt = findViewById(R.id.chat_room_msgTxt);
         galleryBtn = findViewById(R.id.chat_room_mediaBtn);
+        secretChatBtn = findViewById(R.id.chat_room_secretChatBtn);
+        editTopicBtn = findViewById(R.id.edit_topic);
+        openCameraBtn = findViewById(R.id.open_camera_btn);
+
+        openCameraBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                startActivityForResult(intent, 101);
+            }
+        });
 
         client = ((MyApp)getApplication()).getClient();
         new InitChatTask().execute(topicName);
@@ -93,13 +103,14 @@ public class ChatRoomActivity extends AppCompatActivity {
 
     }
 
+
+
     @Override
     protected void onStart() {
         super.onStart();
-
         messageAdapter = new MessageAdapter(getApplicationContext(), client.getChatMessages(), client.getUsername(), client.getSavedMedia());
         messageAdapter.notifyDataSetChanged();
-
+        topicName = client.getSubbedTopics().get(client.getSubbedTopics().indexOf(topicName));
         sendMsgBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -115,7 +126,62 @@ public class ChatRoomActivity extends AppCompatActivity {
             }
         });
 
+        editTopicBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Dialog dialog = new Dialog(ChatRoomActivity.this);
+                dialog.setTitle("Edit topic properties");
+                dialog.setContentView(R.layout.edit_topic_box_layout);
+
+                editTopicNicknameBtn = dialog.findViewById(R.id.editTopicName_btn);
+                editTopicNameTxt = dialog.findViewById(R.id.editTopicName_edtTxt);
+                dialog.show();
+                editTopicNicknameBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        String newTopicName = editTopicNameTxt.getText().toString();
+                        new EditTopicNameTask().execute(newTopicName);
+
+                    }
+                });
+
+                editUserNicknameBtn = dialog.findViewById(R.id.editUserNickname_btn);
+                editUserNicknameOld = dialog.findViewById(R.id.editUserNicknameStart_edtTxt);
+                editUserNicknameNew = dialog.findViewById(R.id.editUserNicknameEnd_edtTxt);
+                editUserNicknameBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+
+                    }
+                });
+            }
+        });
+
+        secretChatBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (!client.getSecretToggle()){
+                    Toast.makeText(ChatRoomActivity.this,
+                            "You have entered secret chat mode.",
+                            Toast.LENGTH_SHORT).show();
+                    Toast.makeText(ChatRoomActivity.this,
+                            "All the messages from now on will be deleted when you exit the chat",
+                            Toast.LENGTH_SHORT).show();
+                    Toast.makeText(ChatRoomActivity.this,
+                            "To revert it back to normal just press the button again. ",
+                            Toast.LENGTH_SHORT).show();
+                }else{
+                    Toast.makeText(ChatRoomActivity.this,
+                            "You have exited secret chat mode.",
+                            Toast.LENGTH_SHORT).show();
+                }
+                new SecretChatTask().execute();
+
+            }
+        });
+
         galleryBtn.setOnClickListener(new View.OnClickListener() {
+            @SuppressLint("IntentReset")
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
@@ -123,13 +189,18 @@ public class ChatRoomActivity extends AppCompatActivity {
                 startActivityForResult(intent, 3);
             }
         });
-
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == RESULT_OK && data != null) {
+        if(requestCode == 101 && resultCode == RESULT_OK){
+            Bitmap bitmap = (Bitmap) data.getExtras().get("data");
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.JPEG,100,bytes);
+            MediaStore.Images.Media.insertImage(getApplicationContext().getContentResolver(),bitmap,String.valueOf(System.currentTimeMillis()),null);
+            Toast.makeText(this,"Image saved successfully",Toast.LENGTH_SHORT).show();
+        } else if (requestCode==3 && resultCode == RESULT_OK && data != null) {
             Uri selectedFile = data.getData();
             String fileExtension = getFileName(selectedFile);
             fileExtension = fileExtension.substring(fileExtension.lastIndexOf(".")+1);
@@ -156,9 +227,6 @@ public class ChatRoomActivity extends AppCompatActivity {
 //                    AssetFileDescriptor fileDescriptor = getApplicationContext().getContentResolver().openAssetFileDescriptor(selectedFile , "r");
 //                    long fileSize = fileDescriptor.getLength();
 //                    byte[] video_bytes = new byte[(int)fileSize];
-//
-//                    System.out.println("asAaaaaaaa");
-//                    System.out.println(fileSize);
 //
 //                    while ((nRead = inputStream.read(video_bytes, 0, video_bytes.length)) != -1) {
 //                        buffer.write(video_bytes, 0, nRead);
@@ -199,10 +267,11 @@ public class ChatRoomActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        //endChatSession();
+        endChatSession();
     }
 
     //Async Tasks
+
     private class GenerateVideoFileTask extends AsyncTask<Uri, Void, MultimediaFile> {
         private final ProgressDialog progressDialog = new ProgressDialog(ChatRoomActivity.this);
         @Override
@@ -223,7 +292,6 @@ public class ChatRoomActivity extends AppCompatActivity {
                 long fileSize = fileDescriptor.getLength();
                 byte[] video_bytes = new byte[(int) fileSize];
 
-                System.out.println("asAaaaaaaa");
                 System.out.println(fileSize);
 
                 while ((nRead = inputStream.read(video_bytes, 0, video_bytes.length)) != -1) {
@@ -243,6 +311,30 @@ public class ChatRoomActivity extends AppCompatActivity {
             System.out.println(multimediaFile);
             MMFToSend = multimediaFile;
             progressDialog.dismiss();
+        }
+    }
+
+    private class EditTopicNameTask extends AsyncTask <String,Void, String>{
+
+        @Override
+        protected String doInBackground(String... strings) {
+            System.out.println("New Topic Name Input" + strings[0]);
+            Value v = new Value("set_topic_name" + " " + strings[0]);
+            v.setCommand(true);
+            client.push(v);
+            return null;
+        }
+    }
+
+    private class SecretChatTask extends AsyncTask <Void,Void, Void> {
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            client.setSecretToggle(!client.getSecretToggle());
+            Value v = new Value("secret_chat");
+            v.setCommand(true);
+            client.push(v);
+            return null;
         }
     }
 
