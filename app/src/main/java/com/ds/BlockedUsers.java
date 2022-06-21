@@ -132,11 +132,11 @@ public class BlockedUsers extends AppCompatActivity implements NavigationView.On
                 pos=i;
             }
         });
+
     }
     //MENU UNBLOCK BUTTON ACTION
     @Override
     public boolean onMenuItemClick(MenuItem menuItem) {
-        System.out.println(client);
         switch (menuItem.getItemId()) {
             case R.id.unblock_user_menuBtn:
                 //if user is blocked -> unblock else -> Toast

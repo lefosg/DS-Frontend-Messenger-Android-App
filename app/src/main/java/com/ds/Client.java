@@ -317,14 +317,16 @@ public class Client implements Publisher, Consumer
         if (profile.getSubbedTopics().contains(topic)) {
             push(new Value("UNSUB"));
             push(new Value(topic));
+            int index = profile.getSubbedTopics().indexOf(topic);
             profile.getSubbedTopics().remove(topic);
+            profile.getSubbedTopicsImages().remove(index);
             try {
                 //removes the topic from subbed_topics.txt
-                File file = new File(userPath+"/subbed_topics.txt");
-                List<String> out = Files.lines(file.toPath())
-                        .filter(line -> !line.contains(topic))
-                        .collect(Collectors.toList());
-                Files.write(file.toPath(), out, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+//                File file = new File(userPath+"/subbed_topics.txt");
+//                List<String> out = Files.lines(file.toPath())
+//                        .filter(line -> !line.contains(topic))
+//                        .collect(Collectors.toList());
+//                Files.write(file.toPath(), out, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
             } catch (Exception e) {
                 e.printStackTrace();
             }

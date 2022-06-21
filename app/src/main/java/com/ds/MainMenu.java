@@ -28,6 +28,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -55,7 +56,7 @@ import java.util.TimerTask;
 */
 
 
-public class MainMenu extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
+public class MainMenu extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener, PopupMenu.OnMenuItemClickListener {
     public final String TAG = "MainMenu";
     private DrawerLayout drawerLayout;
     private View header;
@@ -63,6 +64,7 @@ public class MainMenu extends AppCompatActivity implements NavigationView.OnNavi
     String ip_extra = "ip_extra";
     String username, ip;
     TextView txtuser, txtip;
+    String topicName_to_unsub;
 
     int logout_counter;
     ArrayList<String> topicNames = new ArrayList<>();
@@ -160,7 +162,15 @@ public class MainMenu extends AppCompatActivity implements NavigationView.OnNavi
             }
         });
 
-
+        binding.chatsGridView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                topicName_to_unsub = client.getSubbedTopics().get(position);
+                Toast.makeText(MainMenu.this, "AA "+topicName_to_unsub, Toast.LENGTH_SHORT).show();
+                showChatManagementMenu(view);
+                return false;
+            }
+        });
     } //onStart
 
     @Override
@@ -182,9 +192,27 @@ public class MainMenu extends AppCompatActivity implements NavigationView.OnNavi
         }
     }//onBackPressed
 
+    private void showChatManagementMenu(View v) {
+        PopupMenu popup = new PopupMenu(MainMenu.this, v);
+        popup.setOnMenuItemClickListener(MainMenu.this);
+        popup.inflate(R.menu.popup_manage_chat);
+        popup.show();
+    }
+
+    @Override
+    public boolean onMenuItemClick(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.unsubscribe_chat_menuBtn:
+                new UnsubscribeTask().execute(topicName_to_unsub);
+                break;
+            default:
+                return false;
+        }
+        return true;
+    }
 
     //Async Tasks
-    private class   GetAvailableTopics extends AsyncTask<Dialog, Void, Dialog> {
+    private class GetAvailableTopics extends AsyncTask<Dialog, Void, Dialog> {
         private final ProgressDialog progressDialog = new ProgressDialog(MainMenu.this);
 
         @Override
@@ -258,6 +286,20 @@ public class MainMenu extends AppCompatActivity implements NavigationView.OnNavi
         protected void onPostExecute(String topic) {
             gridAdapter.notifyDataSetChanged();
 
+        }
+    }
+
+    private class UnsubscribeTask extends AsyncTask<String, Void, Void> {
+        @Override
+        protected Void doInBackground(String... strings) {
+            String topic_to_unsub = strings[0];
+            client.unsubscribe(topic_to_unsub);
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void unused) {
+            gridAdapter.notifyDataSetChanged();
         }
     }
 
