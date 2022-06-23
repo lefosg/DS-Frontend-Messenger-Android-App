@@ -171,6 +171,8 @@ public class MainMenu extends AppCompatActivity implements NavigationView.OnNavi
                 return false;
             }
         });
+
+        gridAdapter.notifyDataSetChanged();
     } //onStart
 
     @Override

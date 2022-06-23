@@ -45,11 +45,12 @@ public class ChatRoomActivity extends AppCompatActivity {
     ImageButton sendMsgBtn, galleryBtn,secretChatBtn,openCameraBtn;
     MultimediaFile topicIconMMF, MMFToSend;
     CircularImageView activityChatIcon;
-    EditText sendMsgTxt,editTopicNameTxt,editUserNicknameOld,editUserNicknameNew;
+    EditText sendMsgTxt,editTopicNameTxt,editUserNicknameNew;
     Client client;
     Button editTopicBtn,editTopicNicknameBtn,editUserNicknameBtn;
     MessageAdapter messageAdapter;
     RecyclerView recyclerView;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -98,7 +99,7 @@ public class ChatRoomActivity extends AppCompatActivity {
         Icon icon = Icon.createWithData(topicIconMMF.getMultimediaFileChunk(), 0, (int)topicIconMMF.getLength());
         activityChatIcon.setImageIcon(icon);
 
-        messageAdapter = new MessageAdapter(getApplicationContext(), client.getChatMessages(), client.getUsername(), client.getSavedMedia());
+        messageAdapter = new MessageAdapter(getApplicationContext(), client.getChatMessages(), client.getUsername(), client.getSavedMedia(), client.getNicknames().get(topicName));
         recyclerView.setAdapter(messageAdapter);
 
     }
@@ -108,7 +109,7 @@ public class ChatRoomActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        messageAdapter = new MessageAdapter(getApplicationContext(), client.getChatMessages(), client.getUsername(), client.getSavedMedia());
+        messageAdapter = new MessageAdapter(getApplicationContext(), client.getChatMessages(), client.getUsername(), client.getSavedMedia(), client.getNicknames().get(topicName));
         messageAdapter.notifyDataSetChanged();
         topicName = client.getSubbedTopics().get(client.getSubbedTopics().indexOf(topicName));
         sendMsgBtn.setOnClickListener(new View.OnClickListener() {
@@ -140,18 +141,21 @@ public class ChatRoomActivity extends AppCompatActivity {
                     @Override
                     public void onClick(View view) {
                         String newTopicName = editTopicNameTxt.getText().toString();
+                        editTopicNameTxt.setText("");
                         new EditTopicNameTask().execute(newTopicName);
 
                     }
                 });
 
                 editUserNicknameBtn = dialog.findViewById(R.id.editUserNickname_btn);
-                editUserNicknameOld = dialog.findViewById(R.id.editUserNicknameStart_edtTxt);
                 editUserNicknameNew = dialog.findViewById(R.id.editUserNicknameEnd_edtTxt);
                 editUserNicknameBtn.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-
+                        String newNickname = editUserNicknameNew.getText().toString();
+                        client.getNicknames().put(topicName,newNickname);
+                        editUserNicknameNew.setText("");
+                        new EditNicknameTask().execute(newNickname);
                     }
                 });
             }
@@ -209,15 +213,16 @@ public class ChatRoomActivity extends AppCompatActivity {
             System.out.println(selectedFile.getPath());
             try {
                 if (!fileExtension.equalsIgnoreCase("mp4")){
-                    InputStream inputStream = getContentResolver().openInputStream(selectedFile);
-                    Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-
-                    ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
-                    byte[] byte_arr = stream.toByteArray();
-
-                    MultimediaFile imageToSend = new MultimediaFile(byte_arr, getFileName(selectedFile), client.getUsername());
-                    MMFToSend = imageToSend;
+                    new GenerateImageFileTask().execute(selectedFile);
+//                    InputStream inputStream = getContentResolver().openInputStream(selectedFile);
+//                    Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+//
+//                    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+//                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+//                    byte[] byte_arr = stream.toByteArray();
+//
+//                    MultimediaFile imageToSend = new MultimediaFile(byte_arr, getFileName(selectedFile), client.getUsername());
+//                    MMFToSend = imageToSend;
                 } else {
                     new GenerateVideoFileTask().execute(selectedFile);
 //                    InputStream inputStream = getContentResolver().openInputStream(selectedFile);
@@ -272,11 +277,56 @@ public class ChatRoomActivity extends AppCompatActivity {
 
     //Async Tasks
 
+    private class EditNicknameTask extends AsyncTask <String,Void, String>{
+
+        @Override
+        protected String doInBackground(String... strings) {
+            Value v = new Value("set_nickname" + " " + strings[0]);
+            v.setCommand(true);
+            client.push(v);
+            return null;
+        }
+    }
+
+    private class GenerateImageFileTask extends AsyncTask<Uri, Void, MultimediaFile> {
+        private final ProgressDialog progressDialog = new ProgressDialog(ChatRoomActivity.this);
+        @Override
+        protected void onPreExecute() {
+            this.progressDialog.setMessage("Processing Image...");
+            this.progressDialog.show();
+        }
+
+        @Override
+        protected MultimediaFile doInBackground(Uri... uris) {
+            try {
+                Uri selectedFile = uris[0];
+                InputStream inputStream = getContentResolver().openInputStream(selectedFile);
+                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+                byte[] byte_arr = stream.toByteArray();
+
+                MultimediaFile imageToSend = new MultimediaFile(byte_arr, getFileName(selectedFile), client.getUsername());
+                return imageToSend;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+        @Override
+        protected void onPostExecute(MultimediaFile multimediaFile) {
+            System.out.println(multimediaFile);
+            MMFToSend = multimediaFile;
+            progressDialog.dismiss();
+        }
+    }
+
     private class GenerateVideoFileTask extends AsyncTask<Uri, Void, MultimediaFile> {
         private final ProgressDialog progressDialog = new ProgressDialog(ChatRoomActivity.this);
         @Override
         protected void onPreExecute() {
-            this.progressDialog.setMessage("Processing...");
+            this.progressDialog.setMessage("Processing Video...");
             this.progressDialog.show();
         }
 
@@ -322,7 +372,12 @@ public class ChatRoomActivity extends AppCompatActivity {
             Value v = new Value("set_topic_name" + " " + strings[0]);
             v.setCommand(true);
             client.push(v);
-            return null;
+            return strings[0];
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            client.getSubbedTopics().set(client.getSubbedTopics().indexOf(topicName), s);
         }
     }
 

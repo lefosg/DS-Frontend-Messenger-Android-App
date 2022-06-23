@@ -19,6 +19,8 @@ public class Client implements Publisher, Consumer
     private static final String SET_NICKNAME = "set_nickname";
     private static final String FRIEND_REQUEST = "friend_request";
     private static final String FRIEND_REQUEST_RESPONSE = "friend_request_response";
+    private static final String SET_TOPIC_NAME = "set_topic_name";
+
     //Profile Information
     private ProfileName profile;
     private ArrayList<String> retrieved_topics;
@@ -30,6 +32,8 @@ public class Client implements Publisher, Consumer
     private ArrayList<Value> chatMessages = new ArrayList<>();
     //private int chat_history_len;
     boolean secretToggle;
+    private HashMap<String,String> nicknames;
+
 
 
 
@@ -62,6 +66,7 @@ public class Client implements Publisher, Consumer
             this.savedMedia = "/saved media/";
             this.topics = "/topics/";
             this.secretToggle = false;
+            this.nicknames = new HashMap<>();
             //loadSubbedTopics(userPath + "/subbed_topics.txt");
         } catch (Exception e) {
             closeEverything();
@@ -78,12 +83,6 @@ public class Client implements Publisher, Consumer
             public void run() {
                 Thread.currentThread().setPriority(8);
                 Value msgFromGroupChat;
-                try {
-                    defaultTopicImage = ((Value) reader.readObject()).getMultiMediaFile();  //get topic names
-                    defaultUserImage = ((Value) reader.readObject()).getMultiMediaFile();  //get topic images
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
                 while(socket.isConnected()){
                     try{
                         msgFromGroupChat = (Value) reader.readObject();
@@ -140,6 +139,17 @@ public class Client implements Publisher, Consumer
                                     disconnect();
                                     reconnect(new BrokerAddressInfo(info[0], Integer.parseInt(info[1])), topic);
                                     continue;
+                                }
+                                else if (msg.equals("GET_DEFAULT_IMAGES")) {
+                                    defaultTopicImage = ((Value) reader.readObject()).getMultiMediaFile();  //get default topic image
+                                    defaultUserImage = ((Value) reader.readObject()).getMultiMediaFile();  //get default user image
+                                }
+                                //set topic name
+                                else if (msg.contains(SET_TOPIC_NAME)) {
+                                    String names[] = msg.split(" ");
+                                    String oldName = names[1];
+                                    String newName = names[2];
+                                    getSubbedTopics().set(getSubbedTopics().indexOf(oldName), newName);
                                 }
                             }
                             //lastly, its a message for the chat
@@ -263,6 +273,7 @@ public class Client implements Publisher, Consumer
         if (!profile.getSubbedTopics().contains(topicName)) {
             push(new Value("SUB"));
             push(new Value(topicName));
+            nicknames.put(topicName,getUsername());
             profile.getSubbedTopics().add(topicName);
             profile.getDateRegistered().add(new Date());
             profile.getSubbedTopicsImages().add(topicImage);
@@ -573,6 +584,8 @@ public class Client implements Publisher, Consumer
 
     }
 
+
+
     public void addMsgToChat(Value value) {
         chatMessages.add(value);
     }
@@ -660,6 +673,14 @@ public class Client implements Publisher, Consumer
 
     public void setChatMessages(ArrayList<Value> chatMessages) {
         this.chatMessages = chatMessages;
+    }
+
+    public void setNicknames(HashMap<String, String> nicknames) {
+        this.nicknames = nicknames;
+    }
+
+    public HashMap<String, String> getNicknames() {
+        return nicknames;
     }
 
     public void setContext(Context context) {

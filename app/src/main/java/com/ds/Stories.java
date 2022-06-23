@@ -143,8 +143,12 @@ public class Stories extends AppCompatActivity implements NavigationView.OnNavig
             Bitmap bitmap = (Bitmap) data.getExtras().get("data");
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             bitmap.compress(Bitmap.CompressFormat.JPEG,100,bytes);
-            MediaStore.Images.Media.insertImage(getApplicationContext().getContentResolver(),bitmap,String.valueOf(System.currentTimeMillis()),null);
-            Toast.makeText(this,"Image saved successfully",Toast.LENGTH_SHORT).show();
+            byte[] byte_arr = bytes.toByteArray();
+            MultimediaFile imageToSend = new MultimediaFile(byte_arr, "temp.bmp", client.getUsername());
+            new UploadStoryTask().execute(imageToSend);
+            //MediaStore.Images.Media.insertImage(getApplicationContext().getContentResolver(),bitmap,String.valueOf(System.currentTimeMillis()),null);
+            //Toast.makeText(this,"Image saved successfully",Toast.LENGTH_SHORT).show();
+
         }else if(requestCode == 3){
             if (resultCode == RESULT_OK && data != null) {
                 Uri selectedFile = data.getData();
@@ -152,18 +156,17 @@ public class Stories extends AppCompatActivity implements NavigationView.OnNavig
                 fileExtension = fileExtension.substring(fileExtension.lastIndexOf(".")+1);
                 try {
                     if (!fileExtension.equalsIgnoreCase("mp4")) {
-                        InputStream inputStream = getContentResolver().openInputStream(selectedFile);
-                        Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-
-                        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
-                        byte[] byte_arr = stream.toByteArray();
-                        MultimediaFile story = new MultimediaFile(byte_arr, getFileName(selectedFile), client.getUsername());
-
-                        new UploadStoryTask().execute(story);
+                        new GenerateImageFileTask().execute(selectedFile);
+//                        InputStream inputStream = getContentResolver().openInputStream(selectedFile);
+//                        Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+//
+//                        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+//                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+//                        byte[] byte_arr = stream.toByteArray();
+//                        MultimediaFile story = new MultimediaFile(byte_arr, getFileName(selectedFile), client.getUsername());
+//                        new UploadStoryTask().execute(story);
                     } else {
                         new GenerateVideoFileTask().execute(selectedFile);
-                        //upload task is called onPostExecute of GenerateVideoFileTask
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -259,6 +262,33 @@ public class Stories extends AppCompatActivity implements NavigationView.OnNavig
             viewPager.setAdapter(storiesAdapter);
             storiesAdapter.notifyDataSetChanged();
             progressDialog.dismiss();
+        }
+    }
+
+    private class GenerateImageFileTask extends AsyncTask<Uri, Void, MultimediaFile> {
+
+        @Override
+        protected MultimediaFile doInBackground(Uri... uris) {
+            try {
+                Uri selectedFile = uris[0];
+                InputStream inputStream = getContentResolver().openInputStream(selectedFile);
+                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+                byte[] byte_arr = stream.toByteArray();
+
+                MultimediaFile imageToSend = new MultimediaFile(byte_arr, getFileName(selectedFile), client.getUsername());
+                return imageToSend;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(MultimediaFile multimediaFile) {
+            new UploadStoryTask().execute(multimediaFile);
         }
     }
 

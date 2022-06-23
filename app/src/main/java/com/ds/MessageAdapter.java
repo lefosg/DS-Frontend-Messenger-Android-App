@@ -30,13 +30,19 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
     private Context mContext;
     private ArrayList<Value> mChat;
     private String username, savedMediaPath;
+    private String nickname;
 
 
-    public MessageAdapter(Context mContext, ArrayList<Value> mChat, String username, String savedMediaPath){
+
+    public MessageAdapter(Context mContext, ArrayList<Value> mChat, String username, String savedMediaPath, String nickname){
         this.mContext = mContext;
         this.mChat = mChat;
+        System.out.println("sssssSSDSDADASD");
+        System.out.println(mChat);
         this.username = username;
         this.savedMediaPath = savedMediaPath;
+        this.nickname = nickname;
+
     }
 
     @NonNull
@@ -83,11 +89,6 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
                     }
                 });
                 holder.playVideoBtn.setVisibility(View.VISIBLE);
-                //holder.videoView.setVideoURI(Uri.fromFile(new File(savedMediaPath + media.getFileName())));
-                //MediaController mediaController = new MediaController(mContext);
-                //holder.videoView.setMediaController(mediaController);
-                //mediaController.setAnchorView(holder.videoView);
-                //holder.videoView.setVisibility(View.VISIBLE);
             }
         }
         holder.txt_seen.setText(chat.getSender());
@@ -120,6 +121,9 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
 
     @Override
     public int getItemViewType(int position) {
+        //mChat.get(position).getSender().equals(nickname) ||
+        System.out.println("AASDASDASDASDASDASDSA");
+        System.out.println(mChat);
         if (mChat.get(position).getSender().equals(username)){
             return MSG_TYPE_RIGHT;
         } else {

@@ -4,14 +4,19 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import android.app.AlertDialog;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.Menu;
@@ -66,6 +71,11 @@ public class Notifications extends AppCompatActivity implements NavigationView.O
         notificationsLV = findViewById(R.id.notifications_lv);
         refreshLayout = findViewById(R.id.notifications_swiperefresh);
 
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+            NotificationChannel channel = new NotificationChannel("Notification","Notification",NotificationManager.IMPORTANCE_DEFAULT);
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            manager.createNotificationChannel(channel);
+        }
     }
 
     @Override
@@ -74,6 +84,16 @@ public class Notifications extends AppCompatActivity implements NavigationView.O
         client = ((MyApp)getApplication()).getClient();
 
         notifications = client.getNotifications();
+        if(notifications.size()>0){
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(Notifications.this,"Notification")
+                    .setSmallIcon(R.drawable.ic_notifications)
+                    .setContentTitle("Friend Request Recieved !")
+                    .setContentText("Wow someone wants to be your friend")
+                    .setAutoCancel(true);
+
+            NotificationManagerCompat managerCompat = NotificationManagerCompat.from(Notifications.this);
+            managerCompat.notify(1, builder.build());
+        }
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, notifications);
         notificationsLV.setAdapter(adapter);
 
