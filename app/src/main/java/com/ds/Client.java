@@ -250,12 +250,12 @@ public class Client implements Publisher, Consumer
                     return;
                 }
                 //else generate chunks
-                //ArrayList<Value> chunks = generateChunks(value);
-                //profile.getUserVideoFilesMap().put(value.getMultiMediaFile().getFileName(), chunks);
-                //for (Value chunk : chunks) {
-                //    writer.writeObject(chunk);
-                //    writer.flush();
-                //}
+                ArrayList<Value> chunks = generateChunks(value);
+                profile.getUserVideoFilesMap().put(value.getMultiMediaFile().getFileName(), chunks);
+                for (Value chunk : chunks) {
+                    writer.writeObject(chunk);
+                    writer.flush();
+                }
                 writer.writeObject(value);
                 writer.flush();
             }

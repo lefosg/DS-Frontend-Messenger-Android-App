@@ -114,7 +114,7 @@
         android:hint="Ip : Port"
         android:inputType="text"
         android:minHeight="48dp"
-        android:text="192.168.1.8:7000"
+        android:text="192.168.1.6:7000"
         app:layout_constraintBottom_toTopOf="@+id/log_in_button"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/log_in_name"
