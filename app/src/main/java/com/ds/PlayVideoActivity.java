@@ -18,11 +18,19 @@ public class PlayVideoActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_play_video);
+    }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
         Intent intent = getIntent();
 
         videoView = findViewById(R.id.play_video_view);
-        videoView.setVideoURI(Uri.fromFile(new File(intent.getStringExtra("videoPath"))));
+        if (!(((MyApp)getApplication()).getClient().getUsername().equals(intent.getStringExtra("username")))){
+            videoView.setVideoURI(Uri.fromFile(new File(intent.getStringExtra("videoPath"))));
+        }else {
+            videoView.setVideoURI(((MyApp)getApplication()).getVideoUri());
+        }
         MediaController mediaController = new MediaController(this);
         videoView.setMediaController(mediaController);
         mediaController.setAnchorView(videoView);

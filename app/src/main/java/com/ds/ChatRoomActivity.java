@@ -42,7 +42,7 @@ import java.util.Base64;
 
 public class ChatRoomActivity extends AppCompatActivity {
     String topicName;
-    ImageButton sendMsgBtn, galleryBtn,secretChatBtn,openCameraBtn;
+    ImageButton sendMsgBtn, galleryBtn,secretChatBtn,openCameraBtn,editTopicImageBtn;
     MultimediaFile topicIconMMF, MMFToSend;
     CircularImageView activityChatIcon;
     EditText sendMsgTxt,editTopicNameTxt,editUserNicknameNew;
@@ -136,6 +136,7 @@ public class ChatRoomActivity extends AppCompatActivity {
 
                 editTopicNicknameBtn = dialog.findViewById(R.id.editTopicName_btn);
                 editTopicNameTxt = dialog.findViewById(R.id.editTopicName_edtTxt);
+                editTopicImageBtn = dialog.findViewById(R.id.editTopicImageBtn);
                 dialog.show();
                 editTopicNicknameBtn.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -156,6 +157,14 @@ public class ChatRoomActivity extends AppCompatActivity {
                         client.getNicknames().put(topicName,newNickname);
                         editUserNicknameNew.setText("");
                         new EditNicknameTask().execute(newNickname);
+                    }
+                });
+                editTopicImageBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                        intent.setType("image/* video/*");
+                        startActivityForResult(intent, 5);
                     }
                 });
             }
@@ -214,36 +223,25 @@ public class ChatRoomActivity extends AppCompatActivity {
             try {
                 if (!fileExtension.equalsIgnoreCase("mp4")){
                     new GenerateImageFileTask().execute(selectedFile);
-//                    InputStream inputStream = getContentResolver().openInputStream(selectedFile);
-//                    Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-//
-//                    ByteArrayOutputStream stream = new ByteArrayOutputStream();
-//                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
-//                    byte[] byte_arr = stream.toByteArray();
-//
-//                    MultimediaFile imageToSend = new MultimediaFile(byte_arr, getFileName(selectedFile), client.getUsername());
-//                    MMFToSend = imageToSend;
                 } else {
                     new GenerateVideoFileTask().execute(selectedFile);
-//                    InputStream inputStream = getContentResolver().openInputStream(selectedFile);
-//                    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-//
-//                    int nRead;
-//                    AssetFileDescriptor fileDescriptor = getApplicationContext().getContentResolver().openAssetFileDescriptor(selectedFile , "r");
-//                    long fileSize = fileDescriptor.getLength();
-//                    byte[] video_bytes = new byte[(int)fileSize];
-//
-//                    while ((nRead = inputStream.read(video_bytes, 0, video_bytes.length)) != -1) {
-//                        buffer.write(video_bytes, 0, nRead);
-//                    }
-//                    MultimediaFile videoToSend = new MultimediaFile(video_bytes, getFileName(selectedFile), client.getUsername());
-//                    System.out.println(videoToSend);
-//                    MMFToSend = videoToSend;
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+        else if(requestCode==5 && resultCode == RESULT_OK && data != null){
+            Uri selectedFile = data.getData();
+            String fileExtension = getFileName(selectedFile);
+            fileExtension = fileExtension.substring(fileExtension.lastIndexOf(".")+1);
 
+            try{
+                if (!fileExtension.equalsIgnoreCase("mp4")) {
+                    new GenerateTopicImageFileTask().execute(selectedFile);
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+            }
         }
     }
 
@@ -276,7 +274,46 @@ public class ChatRoomActivity extends AppCompatActivity {
     }
 
     //Async Tasks
+    private class GenerateTopicImageFileTask extends AsyncTask<Uri, Void, MultimediaFile> {
 
+        @Override
+        protected MultimediaFile doInBackground(Uri... uris) {
+            try {
+                Uri selectedFile = uris[0];
+                InputStream inputStream = getContentResolver().openInputStream(selectedFile);
+                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+                byte[] byte_arr = stream.toByteArray();
+
+                MultimediaFile imageToSend = new MultimediaFile(byte_arr, getFileName(selectedFile), client.getUsername());
+                return imageToSend;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(MultimediaFile multimediaFile) {
+            new EditTopicImageTask().execute(multimediaFile);
+        }
+    }
+    private class EditTopicImageTask extends AsyncTask<MultimediaFile, Void, Void> {
+        @Override
+        protected Void doInBackground(MultimediaFile... multimediaFiles) {
+            MultimediaFile topic = multimediaFiles[0];
+            Value v = new Value("upload_topic_image");
+            v.setCommand(true);
+            client.push(v);
+            client.push(new Value(topic));
+            client.getProfile().getSubbedTopicsImages().set(client.getSubbedTopics().indexOf(topicName),topic);
+            return null;
+        }
+
+
+    }
     private class EditNicknameTask extends AsyncTask <String,Void, String>{
 
         @Override
@@ -348,7 +385,8 @@ public class ChatRoomActivity extends AppCompatActivity {
                     buffer.write(video_bytes, 0, nRead);
                 }
                 MultimediaFile videoToSend = new MultimediaFile(video_bytes, getFileName(selectedFile), client.getUsername());
-               return videoToSend;
+                ((MyApp)getApplication()).setVideoUri(selectedFile);
+                return videoToSend;
 
             } catch (Exception e) {
                 e.printStackTrace();

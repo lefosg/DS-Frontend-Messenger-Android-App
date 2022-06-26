@@ -130,6 +130,14 @@ public class Client implements Publisher, Consumer
                                     get_stories_count = -1;
                                     continue;
                                 }
+                                //check for topic image change
+                                else if(msg.contains("get_topic_image")){
+                                    Value v = (Value) reader.readObject();
+                                    String[] info = msg.split(" ");
+                                    String topicName = info[1];
+                                    getProfile().getSubbedTopicsImages().set(getSubbedTopics().indexOf(topicName),v.getMultiMediaFile());
+                                    continue;
+                                }
                                 //check for broker message
                                 else if (msg.equals("WRONG_BROKER")) {
                                     String correct_address = ((Value) reader.readObject()).getMessage();
@@ -140,6 +148,16 @@ public class Client implements Publisher, Consumer
                                     reconnect(new BrokerAddressInfo(info[0], Integer.parseInt(info[1])), topic);
                                     continue;
                                 }
+                                //broker is down, redirect if client is in menu (not in chat)
+                                else if(msg.equals("WRONG_BROKER_NOTOPIC")){
+                                    String correct_address = ((Value)reader.readObject()).getMessage();
+                                    currentBroker = correct_address;
+                                    String[] info = correct_address.split(":");
+                                    disconnect();
+                                    reconnect1(new BrokerAddressInfo(info[0], Integer.parseInt(info[1])));
+                                    continue;
+                                }
+                                //get default pfp and topic images
                                 else if (msg.equals("GET_DEFAULT_IMAGES")) {
                                     defaultTopicImage = ((Value) reader.readObject()).getMultiMediaFile();  //get default topic image
                                     defaultUserImage = ((Value) reader.readObject()).getMultiMediaFile();  //get default user image
@@ -545,6 +563,21 @@ public class Client implements Publisher, Consumer
             e.printStackTrace();
         }
     }
+
+    public void reconnect1(BrokerAddressInfo address) {
+        try {
+            System.out.println(address);
+            socket = new Socket(address.getIp(), address.getPort());
+            writer = new ObjectOutputStream(socket.getOutputStream());
+            writer.writeObject(getUsername());  //readObject ston broker
+//            reader.reset();
+            reader = new ObjectInputStream(socket.getInputStream());
+            init();  //readObject ston clientHandler
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 
     /**
      * Calls <i>closeEverything</i> method

@@ -86,7 +86,7 @@ public class MainMenu extends AppCompatActivity implements NavigationView.OnNavi
         binding = ActivityMainMenuBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        client = ((MyApp) getApplication()).getClient();
+        //client = ((MyApp) getApplication()).getClient();
         //username = client.getProfile().getUsername();
 
         ip = this.getIntent().getStringExtra(ip_extra);
@@ -115,6 +115,7 @@ public class MainMenu extends AppCompatActivity implements NavigationView.OnNavi
         //set up to grid view
         gridAdapter = new ChatGridAdapter(MainMenu.this, topicNames, topicImages);
         binding.chatsGridView.setAdapter(gridAdapter);
+        username = client.getProfile().getUsername();
 
 
         //GIA TO MEGALO ARXIKO KOYMPI
@@ -166,7 +167,6 @@ public class MainMenu extends AppCompatActivity implements NavigationView.OnNavi
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
                 topicName_to_unsub = client.getSubbedTopics().get(position);
-                Toast.makeText(MainMenu.this, "AA "+topicName_to_unsub, Toast.LENGTH_SHORT).show();
                 showChatManagementMenu(view);
                 return false;
             }
@@ -291,17 +291,18 @@ public class MainMenu extends AppCompatActivity implements NavigationView.OnNavi
         }
     }
 
-    private class UnsubscribeTask extends AsyncTask<String, Void, Void> {
+    private class UnsubscribeTask extends AsyncTask<String, Void, String> {
         @Override
-        protected Void doInBackground(String... strings) {
+        protected String doInBackground(String... strings) {
             String topic_to_unsub = strings[0];
             client.unsubscribe(topic_to_unsub);
-            return null;
+            return topic_to_unsub;
         }
 
         @Override
-        protected void onPostExecute(Void unused) {
+        protected void onPostExecute(String s) {
             gridAdapter.notifyDataSetChanged();
+            Toast.makeText(MainMenu.this, "Exit topic " + s, Toast.LENGTH_SHORT).show();
         }
     }
 

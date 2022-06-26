@@ -84,6 +84,7 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
                     public void onClick(View v) {
                         Intent intent = new Intent(mContext, PlayVideoActivity.class);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        intent.putExtra("username", chat.getSender());
                         intent.putExtra("videoPath", savedMediaPath + media.getFileName());
                         mContext.startActivity(intent);
                     }
@@ -122,7 +123,6 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
     @Override
     public int getItemViewType(int position) {
         //mChat.get(position).getSender().equals(nickname) ||
-        System.out.println("AASDASDASDASDASDASDSA");
         System.out.println(mChat);
         if (mChat.get(position).getSender().equals(username)){
             return MSG_TYPE_RIGHT;
